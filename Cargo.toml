@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 native-dialog = "0.6.3"
+notify = "4.0.17"
