@@ -1,6 +1,6 @@
 use native_dialog::{FileDialog};
 use notify::{watcher, Watcher, DebouncedEvent};
-use std::{io::stdin, iter::Map, collections::HashMap, fs, sync::mpsc::channel, time::Duration};
+use std::{io::stdin, collections::HashMap, fs, sync::mpsc::channel, time::Duration};
 
 
 fn main() {
@@ -70,6 +70,10 @@ fn mode_track_value() {
             println!("Chosen 8 bit unsigned decimal");
             search_u8
         },
+        1 => {
+            println!("Chosen 16 bit unsigned decimal");
+            search_u16
+        }
         _ => {
             println!("Invalid option. Defaulting to u8");
             search_u8
@@ -122,15 +126,35 @@ fn read_num() -> u32 {
 }
 
 fn search_u8(bytes: Vec<u8>, target_value: u32, valid_locations: &mut Vec<usize>) {
+    let target_value = target_value as u8;
     if valid_locations.is_empty() {
         for (loc, byte) in bytes.iter().enumerate() {
-            if *byte as u32 == target_value {
+            if *byte == target_value {
                 valid_locations.push(loc);
             }
         }
     } else {
-        valid_locations.retain(|loc| bytes[*loc] as u32 == target_value);
+        valid_locations.retain(|loc| bytes[*loc] == target_value);
     }
+}
+
+fn search_u16(bytes: Vec<u8>, target_value: u32, valid_locations: &mut Vec<usize>) {
+    let target_value = target_value as u16;
+    if valid_locations.is_empty() {
+        for loc in 0 .. bytes.len() - 1 {
+            let byte = read_u16(&bytes, loc);
+
+            if byte == target_value {
+                valid_locations.push(loc);
+            }
+        }
+    } else {
+        valid_locations.retain(|loc| read_u16(&bytes, *loc) == target_value);
+    }
+}
+
+fn read_u16(bytes: &[u8], start_index: usize) -> u16 {
+    (bytes[start_index] as u16) | ((bytes[start_index + 1] as u16) << 8)
 }
 
 fn mode_track_loc() {
@@ -171,8 +195,8 @@ fn mode_track_loc() {
                                 });
 
                                 println!("Continued changes from last version of the file: ");
-                                for (i, change) in &changes {
-                                    println!("{:X} now has value {:02X}", i, change);
+                                for i in (&changes).keys() {
+                                    println!("{:X} now has value {:02X}", i, new_bytes[*i]);
                                 }
 
                                 if (&changes).len() <= 1 {
